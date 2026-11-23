@@ -23,10 +23,14 @@ Western University · Queen's University · Ivey Business School · Vector Insti
 <br>
 
 <p align="center">
-  <img src="assets/highlights.svg" alt="MIPA is 7.4 times faster to distill, needs 253.6 times less intermediate storage, and gains 5.1 percentage points over MKDT on CIFAR-10 at a 0.2% budget" width="100%">
+  <img src="assets/hero.svg" alt="Animated MIPA pipeline: real and synthetic images flow through shared augmentations and a frozen encoder into prototype assignments, the joint distribution sharpens, and gradients flow back to update only the synthetic pixels" width="100%">
 </p>
 
-<sub>CIFAR-10, 0.2% synthetic budget, ResNet-18 pretrained with SimCLR on synthetic images only, linear probe with 1% labels (paper Fig. 1b). MKDT is evaluated image-only, i.e. without its auxiliary target representations. Time excludes teacher pretraining (needed by both methods) and MKDT's expert-trajectory generation. Measured on one NVIDIA L40S.</sub>
+<p align="center">
+  <img src="assets/at-a-glance.svg" alt="MIPA versus MKDT on CIFAR-10 at a 0.2% budget: linear-probe accuracy 45.2 versus 40.1 percent, distillation time 6.4 versus 47.8 minutes, intermediate storage 0.042 versus 10.65 GiB" width="100%">
+</p>
+
+<sub>Time is measured on one NVIDIA L40S and excludes teacher pretraining (needed by both methods) and MKDT's expert-trajectory generation. Storage is intermediate distillation data, which for MKDT means expert-trajectory buffers (paper Fig. 1b, Tables 1 and 6).</sub>
 
 ---
 
@@ -85,8 +89,10 @@ Measured on CIFAR-10 (1% labels), distilling with the agreement objective alone 
 
 The loss lives in `bipartite_view_transition_loss` in [`distill.py`](distill.py). It is implemented as joint entropy minus $\beta$ times the row and column marginal entropies, which for the default `--beta 1` is exactly $-I_P(C_1;C_2)$.
 
+What consistency looks like in practice: one real image, two independent augmentations, ten prototypes. Even though the encoder sees differently transformed pixels in each view, the two assignment distributions overlap by 88%. The bar values are the assignment probabilities printed in the paper's Fig. 1a; the images in this figure are illustrative renderings, not outputs of a run.
+
 <p align="center">
-  <img src="assets/assignments.svg" alt="Assignment distribution of one real image over ten synthetic prototypes under two augmented views" width="100%">
+  <img src="assets/assignments.svg" alt="Two side-by-side histograms of how one real image is assigned to synthetic prototypes under two augmented views; the two distributions overlap by 88 percent" width="100%">
 </p>
 
 ## Results
