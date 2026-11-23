@@ -18,11 +18,7 @@ import numpy as np
 import torch
 from torch import nn
 
-# Allow both package imports and running the scripts directly from the repository root.
-if __package__:
-    from . import benchmark_networks as networks
-else:
-    import benchmark_networks as networks
+from models import benchmark_networks as networks
 
 
 # Teacher seed used in the paper for each dataset.

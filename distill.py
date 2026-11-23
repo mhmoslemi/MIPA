@@ -23,19 +23,11 @@ from torch.utils.checkpoint import checkpoint
 from torchvision import transforms
 from torchvision.utils import save_image
 
-# Allow both `python -m MIPA.distill` (package imports) and `python distill.py` (plain imports).
-if __package__:
-    from .common import atomic_save, exclusive_run, restore_rng, rng_state
-    from .data import INPUT_SIZE, SOURCES, SYNTHETIC_NORMALIZATION, ImageView, RawDataset
-    from .dd_teachers import load_teacher
-    from .dm_dsa import make_diff_augmenter
-    from .utils import AUGMENT_FNS, ParamDiffAug, get_time
-else:
-    from common import atomic_save, exclusive_run, restore_rng, rng_state
-    from data import INPUT_SIZE, SOURCES, SYNTHETIC_NORMALIZATION, ImageView, RawDataset
-    from dd_teachers import load_teacher
-    from dm_dsa import make_diff_augmenter
-    from utils import AUGMENT_FNS, ParamDiffAug, get_time
+from utils.common import atomic_save, exclusive_run, restore_rng, rng_state
+from datasets.data import INPUT_SIZE, SOURCES, SYNTHETIC_NORMALIZATION, ImageView, RawDataset
+from distillation.teacher import load_teacher
+from distillation.augment import make_diff_augmenter
+from utils.dsa_utils import AUGMENT_FNS, ParamDiffAug, get_time
 
 
 # Number of optimization steps used in the paper, keyed by synthetic-set size (% of the training split).

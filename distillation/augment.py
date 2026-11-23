@@ -5,11 +5,7 @@ import random
 import torch
 import torch.nn as nn
 
-# Allow both package imports and running the scripts directly from the repository root.
-if __package__:
-    from .utils import DiffAugment, ParamDiffAug
-else:
-    from utils import DiffAugment, ParamDiffAug
+from utils.dsa_utils import DiffAugment, ParamDiffAug
 
 
 def make_diff_augmenter(strategy, param):

@@ -3,11 +3,7 @@
 import torch
 import torch.nn as nn
 
-# Allow both package imports and running the scripts directly from the repository root.
-if __package__:
-    from .common import load_encoder
-else:
-    from common import load_encoder
+from utils.common import load_encoder
 
 
 class NormalizedTeacher(nn.Module):

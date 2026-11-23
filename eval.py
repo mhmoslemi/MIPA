@@ -22,15 +22,9 @@ from torch.nn import functional as F
 from torch.utils.data import Dataset, Subset
 from torchvision.transforms.functional import to_pil_image
 
-# Allow both `python -m MIPA.eval` (package imports) and `python eval.py` (plain imports).
-if __package__:
-    from .common import atomic_json, exclusive_run, file_hash, load_encoder, seed_all, state_hash
-    from .data import INPUT_SIZE, PAPER_TARGETS, SOURCES, SPECS, SYNTHETIC_NORMALIZATION, ImageView, RawDataset, label_indices, loader, locate, probe_transform
-    from .ssl_training import cosine_lr, train
-else:
-    from common import atomic_json, exclusive_run, file_hash, load_encoder, seed_all, state_hash
-    from data import INPUT_SIZE, PAPER_TARGETS, SOURCES, SPECS, SYNTHETIC_NORMALIZATION, ImageView, RawDataset, label_indices, loader, locate, probe_transform
-    from ssl_training import cosine_lr, train
+from utils.common import atomic_json, exclusive_run, file_hash, load_encoder, seed_all, state_hash
+from datasets.data import INPUT_SIZE, PAPER_TARGETS, SOURCES, SPECS, SYNTHETIC_NORMALIZATION, ImageView, RawDataset, label_indices, loader, locate, probe_transform
+from pretraining.ssl_training import cosine_lr, train
 
 
 class SyntheticImages(Dataset):

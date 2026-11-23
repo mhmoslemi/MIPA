@@ -13,13 +13,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-# Allow both package imports and running the scripts directly from the repository root.
-if __package__:
-    from .common import atomic_save, build_encoder, load_encoder, restore_rng, rng_state, seed_all, state_hash
-    from .data import INPUT_SIZE, SSL_NORMALIZATION, ImageView, loader, ssl_transform
-else:
-    from common import atomic_save, build_encoder, load_encoder, restore_rng, rng_state, seed_all, state_hash
-    from data import INPUT_SIZE, SSL_NORMALIZATION, ImageView, loader, ssl_transform
+from utils.common import atomic_save, build_encoder, load_encoder, restore_rng, rng_state, seed_all, state_hash
+from datasets.data import INPUT_SIZE, SSL_NORMALIZATION, ImageView, loader, ssl_transform
 
 
 class LARS(torch.optim.Optimizer):

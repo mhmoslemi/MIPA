@@ -17,11 +17,7 @@ from scipy.io import loadmat
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms as T
 
-# Allow both package imports and running the scripts directly from the repository root.
-if __package__:
-    from .common import digest_json, file_hash, worker_seed
-else:
-    from common import digest_json, file_hash, worker_seed
+from utils.common import digest_json, file_hash, worker_seed
 
 
 # Datasets that can be distilled, and the full list of evaluation (transfer) targets used in the paper.

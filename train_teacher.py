@@ -9,15 +9,9 @@ from pathlib import Path
 
 import torch
 
-# Allow both `python -m MIPA.train_teacher` (package imports) and `python train_teacher.py` (plain imports).
-if __package__:
-    from .common import TEACHER_SEEDS, exclusive_run
-    from .data import SOURCES, RawDataset
-    from .ssl_training import train
-else:
-    from common import TEACHER_SEEDS, exclusive_run
-    from data import SOURCES, RawDataset
-    from ssl_training import train
+from utils.common import TEACHER_SEEDS, exclusive_run
+from datasets.data import SOURCES, RawDataset
+from pretraining.ssl_training import train
 
 
 def main(argv=None):
