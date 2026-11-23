@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+message: "If you use MIPA in your work, please cite the paper below."
+title: "MIPA: Self-Supervised Dataset Distillation via Mutual Information Maximization"
+type: software
+license: MIT
+repository-code: "https://github.com/mhmoslemi/MIPA"
+keywords:
+  - dataset distillation
+  - self-supervised learning
+  - mutual information
+authors:
+  - family-names: Moslemi
+    given-names: Mohammad Hossein
+    affiliation: "Western University; Vector Institute"
+  - family-names: Beitollahi
+    given-names: Mahdi
+    affiliation: "Queen's University"
+  - family-names: Mei
+    given-names: Zhimin
+    affiliation: "Western University"
+  - family-names: Cai
+    given-names: Jiale
+    affiliation: "Western University"
+  - family-names: Ghaddar
+    given-names: Bissan
+    affiliation: "Western University (Ivey Business School)"
+  - family-names: Wang
+    given-names: Boyu
+    affiliation: "Western University; Vector Institute"
+preferred-citation:
+  type: article
+  title: "Self-Supervised Dataset Distillation via Mutual Information Maximization"
+  journal: "arXiv preprint"
+  year: 2026
+  authors:
+    - family-names: Moslemi
+      given-names: Mohammad Hossein
+    - family-names: Beitollahi
+      given-names: Mahdi
+    - family-names: Mei
+      given-names: Zhimin
+    - family-names: Cai
+      given-names: Jiale
+    - family-names: Ghaddar
+      given-names: Bissan
+    - family-names: Wang
+      given-names: Boyu

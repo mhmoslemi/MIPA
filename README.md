@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="MIPA: Self-Supervised Dataset Distillation via Mutual Information Maximization" width="100%">
+<img src="assets/hero.svg" alt="MIPA: Self-Supervised Dataset Distillation via Mutual Information Maximization. A dense dataset is distilled into a small synthetic set, and an animated diagram shows one MIPA step: real and synthetic images flow through shared augmentations and a frozen encoder into prototype assignments, the joint distribution sharpens, and gradients flow back to update only the synthetic pixels" width="100%">
 
 <br>
 
@@ -8,6 +8,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
 ![Task](https://img.shields.io/badge/task-dataset%20distillation-2a78d6?style=flat-square)
 ![SSL](https://img.shields.io/badge/SSL-SimCLR%20%C2%B7%20Barlow%20Twins-6250d6?style=flat-square)
+[![License](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
 [![Cite](https://img.shields.io/badge/cite-BibTeX-b31b1b?style=flat-square)](#citation)
 
 **Compress an unlabeled dataset into a tiny synthetic set (0.2-2% of its size) that self-supervised learning can pretrain on from scratch.**<br>
@@ -21,10 +22,6 @@ Western University · Queen's University · Ivey Business School · Vector Insti
 </div>
 
 <br>
-
-<p align="center">
-  <img src="assets/hero.svg" alt="Animated MIPA pipeline: real and synthetic images flow through shared augmentations and a frozen encoder into prototype assignments, the joint distribution sharpens, and gradients flow back to update only the synthetic pixels" width="100%">
-</p>
 
 <p align="center">
   <img src="assets/at-a-glance.svg" alt="MIPA versus the prior method on CIFAR-10 at a 0.2% budget: linear-probe accuracy 45.2 versus 40.1 percent, distillation time 6.4 versus 47.8 minutes, intermediate storage 0.042 versus 10.65 GiB" width="100%">
@@ -89,10 +86,10 @@ Measured on CIFAR-10 (1% labels), distilling with the agreement objective alone 
 
 The loss lives in `bipartite_view_transition_loss` in [`distill.py`](distill.py). It is implemented as joint entropy minus $\beta$ times the row and column marginal entropies, which for the default `--beta 1` is exactly $-I_P(C_1;C_2)$.
 
-What consistency looks like in practice: one real image, two independent augmentations, ten prototypes. Even though the encoder sees differently transformed pixels in each view, the two assignment distributions overlap by 88%. The bar values are the assignment probabilities printed in the paper's Fig. 1a; the photos are CC0 (see [`assets/IMAGE_CREDITS.md`](assets/IMAGE_CREDITS.md)) and the synthetic prototypes are illustrative renderings of them, not outputs of a run.
+What consistency looks like in practice: one real image and the same image rotated by 90°, assigned to ten prototypes. Even though the encoder sees different pixels in each view, the two assignment distributions overlap by 88%. The bar values are the assignment probabilities printed in the paper's Fig. 1a; the photos are CC0 (see [`assets/IMAGE_CREDITS.md`](assets/IMAGE_CREDITS.md)) and the synthetic prototypes are illustrative renderings of them, not outputs of a run.
 
 <p align="center">
-  <img src="assets/assignments.svg" alt="Two side-by-side histograms of how one real image is assigned to synthetic prototypes under two augmented views; the two distributions overlap by 88 percent" width="100%">
+  <img src="assets/assignments.svg" alt="Two side-by-side histograms of how one real image, and the same image rotated by 90 degrees, are assigned to synthetic prototypes; the two distributions overlap by 88 percent" width="100%">
 </p>
 
 ## Results
@@ -252,7 +249,7 @@ Encoders pretrained on MIPA's CIFAR-10, CIFAR-100 or Tiny ImageNet synthetic set
 ```bash
 git clone https://github.com/mhmoslemi/MIPA.git
 cd MIPA
-pip install torch torchvision numpy scipy pillow
+pip install -r requirements.txt
 ```
 
 Requires **Python 3.10+** and **PyTorch ≥ 2.1**. A CUDA GPU is strongly recommended (the paper's timings are from one NVIDIA L40S); everything also runs on CPU, just slowly. Runs use POSIX file locks, so use Linux or macOS (WSL on Windows).
@@ -410,7 +407,7 @@ Defaults reproduce the paper's setup, so the three commands above are all you ne
 
 ## Citation
 
-If MIPA is useful in your work, please cite:
+If MIPA is useful in your work, please cite the paper (GitHub's **Cite this repository** button reads [`CITATION.cff`](CITATION.cff)):
 
 ```bibtex
 @article{moslemi2026mipa,
@@ -421,6 +418,14 @@ If MIPA is useful in your work, please cite:
   year    = {2026}
 }
 ```
+
+## Acknowledgements
+
+MIPA builds on public work from the dataset-distillation and self-supervised-learning communities. The differentiable siamese augmentation in `utils.py` and the CIFAR-style backbones follow the dataset-condensation code of Zhao and Bilen (DC / DSA), SimCLR and Barlow Twins provide the pretraining objectives, and the information-maximization view of cluster assignments follows Invariant Information Clustering (Ji et al.). The photographs in the figures are CC0 and credited in [`assets/IMAGE_CREDITS.md`](assets/IMAGE_CREDITS.md).
+
+## License
+
+Released under the [MIT License](LICENSE). Code adapted from third-party projects remains under its original license.
 
 <div align="center">
 <sub>Questions or bugs? Open an issue.</sub>
