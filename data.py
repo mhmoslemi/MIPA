@@ -1,5 +1,11 @@
 """Dataset readers, augmentation views, and label sampling for evaluation."""
 
+# Everything related to data lives here:
+#   * locating and reading the five datasets (CIFAR-10/100, Tiny ImageNet, FGVC Aircraft, Stanford Dogs)
+#     with their official train/test splits;
+#   * the SSL augmentation pipelines (SimCLR / Barlow Twins) and the linear-probe transforms;
+#   * class-balanced selection of the labeled subset used by the linear probe.
+
 import hashlib
 import random
 from pathlib import Path
@@ -11,20 +17,25 @@ from scipy.io import loadmat
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms as T
 
+# Allow both package imports and running the scripts directly from the repository root.
 if __package__:
     from .common import digest_json, file_hash, worker_seed
 else:
     from common import digest_json, file_hash, worker_seed
 
 
+# Datasets that can be distilled, and the full list of evaluation (transfer) targets used in the paper.
 SOURCES = ('CIFAR10', 'CIFAR100', 'TinyImageNet')
 PAPER_TARGETS = (*SOURCES, 'Aircraft', 'Dogs')
+# Native image resolution of each source dataset.
 INPUT_SIZE = {'CIFAR10': 32, 'CIFAR100': 32, 'TinyImageNet': 64}
+# [mean, std] per channel used for SSL training and probing.
 SSL_NORMALIZATION = {
     'CIFAR10': [[0.4914, 0.4822, 0.4465], [0.247, 0.2435, 0.2616]],
     'CIFAR100': [[0.5071, 0.4865, 0.4409], [0.2673, 0.2564, 0.2762]],
     'TinyImageNet': [[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]],
 }
+# [mean, std] in which the synthetic images are stored (and optimized) during distillation.
 SYNTHETIC_NORMALIZATION = {
     'CIFAR10': [[0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]],
     'CIFAR100': [[0.5071, 0.4866, 0.4409], [0.2673, 0.2564, 0.2762]],
@@ -32,6 +43,7 @@ SYNTHETIC_NORMALIZATION = {
 }
 
 
+# name -> (number of classes, channel mean, channel std)
 SPECS = {
     'CIFAR10': (10, [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]),
     'CIFAR100': (100, [0.5071, 0.4865, 0.4409], [0.2009, 0.1984, 0.2023]),
@@ -44,7 +56,13 @@ SPECS = {
 
 
 def locate(root, dataset):
+    """Find the folder that holds `dataset` under `root` by checking for a known marker file.
+
+    Several layouts are accepted per dataset; exactly one must exist, otherwise the choice would be
+    ambiguous. Raises FileNotFoundError (with the expected path) if the dataset is not staged.
+    """
     root = Path(root)
+    # (folder, marker file inside it) candidates for each dataset
     candidates = {
         'CIFAR10': [(root, 'cifar-10-batches-py/data_batch_1')],
         'CIFAR100': [(root, 'cifar-100-python/train')],
@@ -65,16 +83,21 @@ def locate(root, dataset):
 
 
 def read_pairs(path):
+    """Read a text file of 'ID value' lines into {int ID: value string}."""
     return {int(key): value for key, value in (line.strip().split(maxsplit=1) for line in Path(path).read_text().splitlines() if line.strip())}
 
 
 def records(root, dataset, training):
-    """Read official split membership; never use test data for selection/training."""
+    """Read official split membership; never use test data for selection/training.
+
+    Returns a list of (image path, zero-based class label) for the file-based datasets
+    (Aircraft, CUB-2011, Dogs, Flowers). `training` selects the train or the test split.
+    """
     folder = locate(root, dataset)
     if dataset == 'Aircraft':
         classes = (folder / 'variants.txt').read_text().splitlines()
         mapping = {name.strip(): index for index, name in enumerate(classes)}
-        split = 'trainval' if training else 'test'
+        split = 'trainval' if training else 'test'  # the official train+val split is used for training
         samples = []
         for line in (folder / f'images_variant_{split}.txt').read_text().splitlines():
             name, label = line.split(maxsplit=1)
@@ -99,6 +122,7 @@ def records(root, dataset, training):
             raise ValueError('Dogs split image/label counts disagree')
         samples = []
         for entry, label in zip(names.reshape(-1), labels):
+            # .mat files nest the file names in object arrays of varying depth; unwrap to a plain string
             while isinstance(entry, np.ndarray):
                 entry = entry.item() if entry.size == 1 else ''.join(entry.tolist())
             name = str(entry)
@@ -117,7 +141,15 @@ def records(root, dataset, training):
 
 
 def select_labels(labels, percentage, seed, policy='exact'):
-    """Select a nested label subset with an exact overall budget."""
+    """Select a nested label subset with an exact overall budget.
+
+    Classes are visited in a random (seeded) order and, round after round, one image per class is added
+    until the budget is reached, which keeps the subset as class-balanced as possible. A larger budget
+    with the same seed always contains the smaller one ("nested").
+
+    Policies: 'exact' (default) respects the budget exactly, 'at_least_one_per_class' raises it to the
+    number of classes if needed, 'random' ignores class balance.
+    """
     labels = np.asarray(labels)
     classes = np.unique(labels)
     count = max(1, int(len(labels) * percentage / 100))
@@ -131,9 +163,9 @@ def select_labels(labels, percentage, seed, policy='exact'):
     if count > len(labels):
         raise ValueError('Label budget exceeds the target training split')
     class_order = generator.permutation(classes)
-    pools = [generator.permutation(np.flatnonzero(labels == label)) for label in class_order]
+    pools = [generator.permutation(np.flatnonzero(labels == label)) for label in class_order]  # shuffled images per class
     chosen = []
-    level = 0
+    level = 0  # round-robin depth: take the `level`-th image of each class in turn
     while len(chosen) < count:
         for pool in pools:
             if level < len(pool):
@@ -145,6 +177,12 @@ def select_labels(labels, percentage, seed, policy='exact'):
 
 
 class RawDataset(Dataset):
+    """A dataset split that returns (PIL image, label) and carries a content fingerprint.
+
+    The fingerprint (hash of the labels plus an image hash or file metadata) is stored in checkpoints so
+    that results can be tied to the exact data they were produced from.
+    """
+
     def __init__(self, root, name, training):
         self.name = name
         self.classes = SPECS[name][0]
@@ -152,13 +190,13 @@ class RawDataset(Dataset):
         folder = locate(root, name)
         if name in ('CIFAR10', 'CIFAR100'):
             cls = getattr(datasets, name)
-            self.base = cls(str(folder), train=training, download=False)
+            self.base = cls(str(folder), train=training, download=False)  # data must already be on disk
             self.targets = np.asarray(self.base.targets, dtype=np.int64)
             pixels = hashlib.sha256(self.base.data.tobytes()).hexdigest()
             identity = {'pixels_sha256': pixels}
         elif name == 'TinyImageNet':
             path = folder / 'tinyimagenet.pt'
-            saved = torch.load(path, map_location='cpu', weights_only=True, mmap=True)
+            saved = torch.load(path, map_location='cpu', weights_only=True, mmap=True)  # memory-mapped, not fully loaded
             split = 'train' if training else 'val'
             self.images = saved['images_' + split]
             self.targets = saved['labels_' + split].long().numpy()
@@ -184,9 +222,9 @@ class RawDataset(Dataset):
 
     def __getitem__(self, index):
         if self.base is not None:
-            image = self.base[index][0]
+            image = self.base[index][0]  # CIFAR: already a PIL image
         elif self.images is not None:
-            image = T.functional.to_pil_image(self.images[index])
+            image = T.functional.to_pil_image(self.images[index])  # Tiny ImageNet: uint8 tensor -> PIL
         else:
             with Image.open(self.samples[index][0]) as handle:
                 image = handle.convert('RGB')
@@ -194,6 +232,8 @@ class RawDataset(Dataset):
 
 
 class ImageView(Dataset):
+    """Apply a transform to the image of every (image, label) pair of `base`."""
+
     def __init__(self, base, transform):
         self.base, self.transform = base, transform
 
@@ -206,6 +246,8 @@ class ImageView(Dataset):
 
 
 class GaussianBlur:
+    """SimCLR-style blur: Gaussian blur with a random sigma drawn uniformly from `sigma` = (low, high)."""
+
     def __init__(self, sigma):
         self.sigma = sigma
 
@@ -214,6 +256,8 @@ class GaussianBlur:
 
 
 class TwoViews:
+    """Apply two different transform pipelines to the same image and return both results."""
+
     def __init__(self, transforms):
         self.transforms = transforms
 
@@ -233,12 +277,18 @@ class ProbeCrop:
 
 
 def ssl_transform(source, method):
+    """Two-view SSL augmentation for `source`, tuned per method.
+
+    SimCLR: strong color jitter and Gaussian blur (p = 0.5) on both views. Barlow Twins: milder color
+    jitter, no blur, and solarization (p = 0.2) on the second view only.
+    Returns a callable that maps one PIL image to a tuple of two augmented tensors.
+    """
     if method == 'simclr':
         jitter, blur, solarize = (0.8, 0.8, 0.8, 0.2), (0.5, 0.5), (0.0, 0.0)
     else:
         jitter, blur, solarize = (0.4, 0.4, 0.2, 0.1), (0.0, 0.0), (0.0, 0.2)
     views = []
-    for i in range(2):
+    for i in range(2):  # blur and solarize probabilities can differ between the two views
         transforms = [
             T.RandomResizedCrop(INPUT_SIZE[source], interpolation=T.InterpolationMode.BICUBIC),
             T.RandomApply([T.ColorJitter(*jitter)], p=0.8),
@@ -252,24 +302,25 @@ def ssl_transform(source, method):
 
 
 def probe_transform(source, training):
+    """Transform for the linear probe: light augmentation for training, center crop for testing."""
     size = INPUT_SIZE[source]
     if training:
         operations = [T.RandomResizedCrop(size, interpolation=T.InterpolationMode.BICUBIC),
                       T.RandomHorizontalFlip()]
     else:
-        operations = [ProbeCrop(size, 8 / 7)]
+        operations = [ProbeCrop(size, 8 / 7)]  # resize to 8/7 of the size, then center-crop
     return T.Compose(operations + [T.ToTensor(), T.Normalize(*SSL_NORMALIZATION[source])])
 
 
 def loader(dataset, batch, workers, seed, shuffle=False, drop_last=False):
+    """DataLoader whose shuffling and worker randomness are fully determined by `seed`."""
     return DataLoader(dataset, batch_size=batch, shuffle=shuffle, drop_last=drop_last,
                       num_workers=workers, pin_memory=torch.cuda.is_available(),
                       worker_init_fn=worker_seed, generator=torch.Generator().manual_seed(seed))
 
 
 def label_indices(dataset, percentage, seed):
+    """Indices of the labeled training subset that the linear probe may use."""
     # Reuse the exact, nested, class-balanced repository selector. It never
     # expands the requested global budget to manufacture one label per class.
     return select_labels(dataset.targets, percentage, seed, policy='exact').tolist()
-
-

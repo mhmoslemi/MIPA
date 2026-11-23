@@ -27,10 +27,10 @@ Western University · Queen's University · Ivey Business School · Vector Insti
 </p>
 
 <p align="center">
-  <img src="assets/at-a-glance.svg" alt="MIPA versus MKDT on CIFAR-10 at a 0.2% budget: linear-probe accuracy 45.2 versus 40.1 percent, distillation time 6.4 versus 47.8 minutes, intermediate storage 0.042 versus 10.65 GiB" width="100%">
+  <img src="assets/at-a-glance.svg" alt="MIPA versus the prior method on CIFAR-10 at a 0.2% budget: linear-probe accuracy 45.2 versus 40.1 percent, distillation time 6.4 versus 47.8 minutes, intermediate storage 0.042 versus 10.65 GiB" width="100%">
 </p>
 
-<sub>Time is measured on one NVIDIA L40S and excludes teacher pretraining (needed by both methods) and MKDT's expert-trajectory generation. Storage is intermediate distillation data, which for MKDT means expert-trajectory buffers (paper Fig. 1b, Tables 1 and 6).</sub>
+<sub><i>Prior</i> is the previous best self-supervised distillation method (MKDT), evaluated on images alone. Time is measured on one NVIDIA L40S and excludes teacher pretraining (needed by both methods) and Prior's expert-trajectory generation. Storage is intermediate distillation data, which for Prior means expert-trajectory buffers (paper Fig. 1b, Tables 1 and 6).</sub>
 
 ---
 
@@ -38,13 +38,13 @@ Western University · Queen's University · Ivey Business School · Vector Insti
 
 Dataset distillation (DD) compresses a large dataset into a tiny synthetic one that still trains a good model. Almost all of it assumes class labels. **MIPA** targets the label-free case: distill an *unlabeled* dataset so that a standard self-supervised learner, trained from scratch on the synthetic images alone, ends up with useful representations.
 
-Existing self-supervised DD methods (KRR-ST, MKDT) adapt supervised DD by shipping auxiliary target representations alongside the images. In the paper's experiments, strip those targets away and the images alone do not reliably beat a random subset of real data. MIPA instead optimizes the images for what SSL actually needs: **information that survives augmentation**.
+Existing self-supervised DD methods adapt supervised DD by shipping auxiliary target representations alongside the images. In the paper's experiments, strip those targets away and the images alone do not reliably beat a random subset of real data. MIPA instead optimizes the images for what SSL actually needs: **information that survives augmentation**.
 
-| | KRR-ST · MKDT | **MIPA** |
+| | Prior methods | **MIPA** |
 |---|---|---|
 | Pretraining needs auxiliary target representations | yes | **no**, images only |
 | Pretraining objective | target-matching losses | **standard SSL** (SimCLR, Barlow Twins) |
-| Extra state during distillation | MKDT: expert-trajectory buffers (10.7 GiB on CIFAR-10) | **0.04 GiB**; only a frozen teacher |
+| Extra state during distillation | expert-trajectory buffers (10.7 GiB on CIFAR-10) | **0.04 GiB**; only a frozen teacher |
 
 ## How it works
 
@@ -89,7 +89,7 @@ Measured on CIFAR-10 (1% labels), distilling with the agreement objective alone 
 
 The loss lives in `bipartite_view_transition_loss` in [`distill.py`](distill.py). It is implemented as joint entropy minus $\beta$ times the row and column marginal entropies, which for the default `--beta 1` is exactly $-I_P(C_1;C_2)$.
 
-What consistency looks like in practice: one real image, two independent augmentations, ten prototypes. Even though the encoder sees differently transformed pixels in each view, the two assignment distributions overlap by 88%. The bar values are the assignment probabilities printed in the paper's Fig. 1a; the images in this figure are illustrative renderings, not outputs of a run.
+What consistency looks like in practice: one real image, two independent augmentations, ten prototypes. Even though the encoder sees differently transformed pixels in each view, the two assignment distributions overlap by 88%. The bar values are the assignment probabilities printed in the paper's Fig. 1a; the photos are CC0 (see [`assets/IMAGE_CREDITS.md`](assets/IMAGE_CREDITS.md)) and the synthetic prototypes are illustrative renderings of them, not outputs of a run.
 
 <p align="center">
   <img src="assets/assignments.svg" alt="Two side-by-side histograms of how one real image is assigned to synthetic prototypes under two augmented views; the two distributions overlap by 88 percent" width="100%">
@@ -97,7 +97,7 @@ What consistency looks like in practice: one real image, two independent augment
 
 ## Results
 
-All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scratch with SimCLR on the synthetic images only**, then evaluated with a linear classifier on 1% or 5% of the labels. Values are means over five runs; standard deviations are in the paper. `Random`, `K-Means` and `SAS` select real images; `KRR-ST` and `MKDT` distill images and are evaluated image-only. `Full data` pretrains on the whole training set and is the ceiling.
+All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scratch with SimCLR on the synthetic images only**, then evaluated with a linear classifier on 1% or 5% of the labels. Values are means over five runs; standard deviations are in the paper. `Random`, `K-Means` and `SAS` select real images; `KRR-ST` and `Prior (MKDT)` distill images and are evaluated image-only. `Full data` pretrains on the whole training set and is the ceiling.
 
 <p align="center">
   <img src="assets/results.svg" alt="Linear-probe accuracy of MIPA versus the strongest of five baselines on CIFAR-10, CIFAR-100 and Tiny ImageNet at 0.2, 1 and 2 percent synthetic budgets" width="100%">
@@ -105,7 +105,7 @@ All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scrat
 
 ### Accuracy with 1% labels
 
-| Dataset | Budget | Random | K-Means | SAS | KRR-ST | MKDT | **MIPA** | Full data |
+| Dataset | Budget | Random | K-Means | SAS | KRR-ST | Prior (MKDT) | **MIPA** | Full data |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | **CIFAR-10** | 0.2% | 40.04 | 38.77 | 37.91 | 28.22 | 40.12 | **45.18** | |
 | | 1% | 48.34 | 46.10 | 44.56 | 29.07 | 40.29 | **52.26** | 87.23 |
@@ -120,7 +120,7 @@ All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scrat
 <details>
 <summary><b>Accuracy with 5% labels</b></summary>
 
-| Dataset | Budget | Random | K-Means | SAS | KRR-ST | MKDT | **MIPA** | Full data |
+| Dataset | Budget | Random | K-Means | SAS | KRR-ST | Prior (MKDT) | **MIPA** | Full data |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | **CIFAR-10** | 0.2% | 46.20 | 45.19 | 44.39 | 34.23 | 46.76 | **50.58** | |
 | | 1% | 52.05 | 51.80 | 52.17 | 35.93 | 46.66 | **57.36** | 89.03 |
@@ -134,29 +134,29 @@ All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scrat
 
 </details>
 
-**Reading the numbers honestly.** MIPA has the highest mean in every configuration, and the margin is clear on CIFAR-10 (+3.9 to +5.2 points over the strongest baseline) and at the 2% CIFAR-100 budget (+3.1). On CIFAR-100 at the 0.2% and 1% budgets the gain is under half a point, about the size of the run-to-run standard deviation; on Tiny ImageNet it is between 0.5 and 1.4 points. A gap to full-data pretraining remains everywhere. MIPA also keeps improving as the synthetic set grows, whereas image-only MKDT barely improves or even drops.
+**Reading the numbers honestly.** MIPA has the highest mean in every configuration, and the margin is clear on CIFAR-10 (+3.9 to +5.2 points over the strongest baseline) and at the 2% CIFAR-100 budget (+3.1). On CIFAR-100 at the 0.2% and 1% budgets the gain is under half a point, about the size of the run-to-run standard deviation; on Tiny ImageNet it is between 0.5 and 1.4 points. A gap to full-data pretraining remains everywhere. MIPA also keeps improving as the synthetic set grows, whereas the image-only prior method barely improves or even drops.
 
 ### Cheaper to distill
 
 <p align="center">
-  <img src="assets/efficiency.svg" alt="Distillation time of MIPA versus MKDT on CIFAR-10, CIFAR-100 and Tiny ImageNet at 0.2, 1 and 2 percent budgets" width="100%">
+  <img src="assets/efficiency.svg" alt="Distillation time of MIPA versus the prior method on CIFAR-10, CIFAR-100 and Tiny ImageNet at 0.2, 1 and 2 percent budgets" width="100%">
 </p>
 
-MIPA is 5.8-8.0× faster than MKDT on CIFAR-10 and CIFAR-100, before even counting MKDT's expert-trajectory generation. On Tiny ImageNet the advantage is large at 0.2% (5.1×) and shrinks at larger budgets (1.2× at 2%). Intermediate storage drops from 10.65-11.91 GiB of trajectory buffers to 0.042 GiB, **over 250× less on all three datasets**.
+MIPA is 5.8-8.0× faster than the prior method on CIFAR-10 and CIFAR-100, before even counting its expert-trajectory generation. On Tiny ImageNet the advantage is large at 0.2% (5.1×) and shrinks at larger budgets (1.2× at 2%). Intermediate storage drops from 10.65-11.91 GiB of trajectory buffers to 0.042 GiB, **over 250× less on all three datasets**.
 
 <details>
 <summary><b>Table: distillation cost</b></summary>
 
 | Dataset | Method | 0.2% (min) | 1% (min) | 2% (min) | Expert trajectories (GPU-h) | Storage (GiB) |
 |---|---|---:|---:|---:|---:|---:|
-| CIFAR-10 | MKDT | 47.82 | 112.90 | 112.83 | 1.01 | 10.65 |
+| CIFAR-10 | Prior | 47.82 | 112.90 | 112.83 | 1.01 | 10.65 |
 | | **MIPA** | **6.43** | **14.07** | **19.48** | none | **0.042** |
-| CIFAR-100 | MKDT | 47.98 | 112.95 | 114.40 | 0.98 | 10.65 |
+| CIFAR-100 | Prior | 47.98 | 112.95 | 114.40 | 0.98 | 10.65 |
 | | **MIPA** | **6.38** | **14.12** | **19.50** | none | **0.042** |
-| Tiny ImageNet | MKDT | 200.62 | 232.43 | 230.62 | 7.13 | 11.91 |
+| Tiny ImageNet | Prior | 200.62 | 232.43 | 230.62 | 7.13 | 11.91 |
 | | **MIPA** | **39.15** | **128.58** | **192.68** | none | **0.042** |
 
-Single NVIDIA L40S; teacher pretraining excluded (required by MIPA, MKDT and KRR-ST alike). Storage is intermediate distillation data.
+Single NVIDIA L40S; teacher pretraining excluded (required by MIPA and prior methods alike). Storage is intermediate distillation data.
 
 </details>
 
@@ -195,7 +195,7 @@ MIPA beats Random on the source dataset in every evaluated setting, and on downs
 
 Linear probe on the source dataset, 1% labels.
 
-| Source | Budget | Random | MKDT | **MIPA** |
+| Source | Budget | Random | Prior | **MIPA** |
 |---|---:|---:|---:|---:|
 | CIFAR-10 | 0.2% | 39.92 | 36.38 | **40.07** |
 | | 1% | 49.34 | 43.32 | **50.65** |
@@ -239,7 +239,7 @@ MIPA beats Random across the whole sweep. An intermediate temperature (τ = 0.2,
 <details>
 <summary><b>Cross-dataset transfer</b></summary>
 
-Encoders pretrained on MIPA's CIFAR-10, CIFAR-100 or Tiny ImageNet synthetic sets were linear-probed on the other two datasets plus FGVC Aircraft and Stanford Dogs. MIPA matches or outperforms the other evaluated methods in every transfer setting among CIFAR-10, CIFAR-100 and Tiny ImageNet. On Aircraft and Dogs the picture is less stable and MKDT or Random win some settings. Per-pair plots are in the paper (Fig. 3).
+Encoders pretrained on MIPA's CIFAR-10, CIFAR-100 or Tiny ImageNet synthetic sets were linear-probed on the other two datasets plus FGVC Aircraft and Stanford Dogs. MIPA matches or outperforms the other evaluated methods in every transfer setting among CIFAR-10, CIFAR-100 and Tiny ImageNet. On Aircraft and Dogs the picture is less stable and the prior method or Random win some settings. Per-pair plots are in the paper (Fig. 3).
 
 </details>
 
