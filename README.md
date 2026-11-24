@@ -1,23 +1,25 @@
 <div align="center">
 
-<img src="assets/hero.svg" alt="MIPA: Self-Supervised Dataset Distillation via Mutual Information Maximization. A dense dataset is distilled into a small synthetic set, and an animated diagram shows one MIPA step: real and synthetic images flow through shared augmentations and a frozen encoder into prototype assignments, the joint distribution sharpens, and gradients flow back to update only the synthetic pixels" width="100%">
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="assets/hero-static.svg">
+  <img src="assets/hero.svg" alt="MIPA, Mutual Information Prototype Alignment: self-supervised dataset distillation via mutual information maximization. A dense dataset is distilled into a small synthetic set, and an animated diagram shows one MIPA step: real and synthetic images flow through shared augmentations and a frozen encoder into prototype assignments, the joint distribution sharpens, and gradients flow back to update only the synthetic pixels" width="100%">
+</picture>
 
 <br>
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
-![Task](https://img.shields.io/badge/task-dataset%20distillation-2a78d6?style=flat-square)
-![SSL](https://img.shields.io/badge/SSL-SimCLR%20%C2%B7%20Barlow%20Twins-6250d6?style=flat-square)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
 [![Cite](https://img.shields.io/badge/cite-BibTeX-b31b1b?style=flat-square)](#citation)
 
-**Compress an unlabeled dataset into a $\color{#3b82f6}{\textsf{\textbf{tiny synthetic set}}}$ (0.2-2% of its size) that self-supervised learning can pretrain on from scratch.**<br>
-$\color{#3b82f6}{\textsf{\textbf{No class labels.}}}$ $\color{#3b82f6}{\textsf{\textbf{No auxiliary teacher targets.}}}$ $\color{#3b82f6}{\textsf{\textbf{No inner-loop training.}}}$
+### Distill an unlabeled dataset into $\color{#2563eb}{\textsf{\textbf{0.2-2\%}}}$ of its size.<br>Pretrain a self-supervised model on it from scratch.
 
-[Overview](#overview) &nbsp;·&nbsp; [How it works](#how-it-works) &nbsp;·&nbsp; [Results](#results) &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Reproducing the paper](#reproducing-the-paper) &nbsp;·&nbsp; [Citation](#citation)
+No class labels, no auxiliary teacher targets, no inner-loop training.
 
-<sub>Mohammad Hossein Moslemi · Mahdi Beitollahi · Zhimin Mei · Jiale Cai · Bissan Ghaddar · Boyu Wang<br>
-Western University · Queen's University · Ivey Business School · Vector Institute</sub>
+[**Results**](#results) &nbsp;·&nbsp; [**How it works**](#how-it-works) &nbsp;·&nbsp; [**Quick start**](#quick-start) &nbsp;·&nbsp; [**Reproduce**](#reproducing-the-paper) &nbsp;·&nbsp; [**Cite**](#citation)
+
+<sub>Mohammad Hossein Moslemi · Mahdi Beitollahi · Zhimin Mei · Jiale Cai · Bissan Ghaddar · Boyu Wang</sub><br>
+<sub>Western University · Queen's University · Ivey Business School · Vector Institute</sub>
 
 </div>
 
@@ -27,15 +29,15 @@ Western University · Queen's University · Ivey Business School · Vector Insti
   <img src="assets/at-a-glance.svg" alt="MIPA versus the prior method on CIFAR-10 at a 0.2% budget: linear-probe accuracy 45.2 versus 40.1 percent, distillation time 6.4 versus 47.8 minutes, intermediate storage 0.042 versus 10.65 GiB" width="100%">
 </p>
 
-<sub><i>Prior</i> is the previous best self-supervised distillation method (MKDT), evaluated on images alone. Time is measured on one NVIDIA L40S and excludes teacher pretraining (needed by both methods) and Prior's expert-trajectory generation. Storage is intermediate distillation data, which for Prior means expert-trajectory buffers (paper Fig. 1b, Tables 1 and 6).</sub>
+> *Prior* is the previous best self-supervised distillation method (MKDT), evaluated on images alone. Time is measured on one NVIDIA L40S and excludes teacher pretraining (needed by both methods) and Prior's expert-trajectory generation. Storage is intermediate distillation data, which for Prior means expert-trajectory buffers (paper Fig. 1b, Tables 1 and 6).
 
----
+<br>
 
-## Overview
+## What MIPA does
 
-Dataset distillation (DD) compresses a large dataset into a tiny synthetic one that still trains a good model. Almost all of it assumes class labels. **MIPA** targets the label-free case: distill an *unlabeled* dataset so that a standard self-supervised learner, trained from scratch on the synthetic images alone, ends up with useful representations.
+Dataset distillation compresses a large dataset into a tiny synthetic one that still trains a good model. Almost all of it assumes class labels. **MIPA** is for the label-free case: it distills an *unlabeled* dataset so that a standard self-supervised learner, trained from scratch on the synthetic images alone, ends up with useful representations.
 
-Existing self-supervised DD methods adapt supervised DD by shipping auxiliary target representations alongside the images. In the paper's experiments, strip those targets away and the images alone do not reliably beat a random subset of real data. MIPA instead optimizes the images for what SSL actually needs: $\color{#3b82f6}{\textsf{\textbf{information that survives augmentation}}}$.
+Earlier self-supervised methods ship auxiliary target representations alongside the images. In the paper's experiments, take those targets away and the images alone do not reliably beat a random subset of real data. MIPA optimizes the images for what SSL actually needs: $\color{#2563eb}{\textsf{\textbf{information that survives augmentation}}}$.
 
 | | Prior methods | **MIPA** |
 |---|---|---|
@@ -43,50 +45,55 @@ Existing self-supervised DD methods adapt supervised DD by shipping auxiliary ta
 | Pretraining objective | target-matching losses | **standard SSL** (SimCLR, Barlow Twins) |
 | Extra state during distillation | expert-trajectory buffers (10.7 GiB on CIFAR-10) | **0.04 GiB**; only a frozen teacher |
 
+<br>
+
 ## How it works
 
-Treat every synthetic image as a $\color{#3b82f6}{\textsf{\textbf{learnable prototype}}}$ in the feature space of a frozen, pre-trained encoder. Each real image is softly assigned to the prototypes by cosine similarity. If the synthetic set preserves augmentation-invariant information, two augmented views of the same real image should receive *consistent* assignments. MIPA maximizes the $\color{#3b82f6}{\textsf{\textbf{mutual information}}}$ between the two views' assignments, and the gradient flows into the synthetic pixels.
+Every synthetic image is a **learnable prototype** in the feature space of a frozen, pretrained encoder. Each real image is softly assigned to the prototypes by cosine similarity. If the synthetic set keeps augmentation-invariant information, two augmented views of the same real image should get *consistent* assignments. MIPA maximizes the **mutual information** between the two views' assignments, and the gradient flows into the synthetic pixels.
 
-<p align="center">
-  <img src="assets/pipeline.svg" alt="MIPA pipeline: shared augmentations, frozen encoder, prototype assignments, joint distribution, mutual information objective, gradient to synthetic pixels" width="100%">
-</p>
+1. **Assign.** A real image $x$ is softly assigned to the $m$ prototypes under an augmentation $a$ that is applied identically to real and synthetic images.
+2. **Pair.** Two independent augmentations give assignment matrices $Q_1, Q_2$. Their symmetric joint distribution is $P$.
+3. **Maximize.** The synthetic set is updated to maximize $I_P(C_1;C_2)$. The teacher is never trained.
 
-For an augmentation $a$ and a frozen teacher $f_{\theta_{\mathcal T}}$, a real image $x$ is assigned to the $m$ synthetic prototypes $x^s_j$ by
+<details>
+<summary><b>Formal definition</b></summary>
+
+For a frozen teacher $f_{\theta_{\mathcal T}}$ and $\psi_a(x) = f_{\theta_{\mathcal T}}(a(x)) / \lVert f_{\theta_{\mathcal T}}(a(x)) \rVert_2$:
 
 $$
-q(j \mid x, \mathcal S, a) = \frac{\exp\left(\psi_a(x)^{\top}\psi_a(x^s_j)/\tau\right)}{\sum_{r=1}^{m}\exp\left(\psi_a(x)^{\top}\psi_a(x^s_r)/\tau\right)},
-\qquad
-\psi_a(x) = \frac{f_{\theta_{\mathcal T}}(a(x))}{\lVert f_{\theta_{\mathcal T}}(a(x))\rVert_2}.
+q(j \mid x, \mathcal S, a) = \frac{\exp\left(\psi_a(x)^{\top}\psi_a(x^s_j)/\tau\right)}{\sum_{r=1}^{m}\exp\left(\psi_a(x)^{\top}\psi_a(x^s_r)/\tau\right)}
 $$
 
-For a batch of $B$ real images and two independently drawn augmentations (each applied identically to the real *and* synthetic images in its view), stack the assignments into $Q_1, Q_2 \in \mathbb{R}^{B\times m}$ and form the symmetric joint distribution
+For a batch of $B$ real images, with $Q_1, Q_2 \in \mathbb{R}^{B\times m}$ stacking the assignments of the two views:
 
 $$
 J = \tfrac{1}{B}\,Q_1^{\top} Q_2, \qquad P = \tfrac{1}{2}\left(J + J^{\top}\right), \qquad
-I_P(C_1;C_2) = \sum_{j,r} P_{jr}\log\frac{P_{jr}}{p_j\,p_r},
+I_P(C_1;C_2) = \sum_{j,r} P_{jr}\log\frac{P_{jr}}{p_j\,p_r}
 $$
 
-and the synthetic set is the maximizer of the expected mutual information:
-
 $$
-\mathcal S^{*} \in \arg\max_{\mathcal S}\ \mathbb{E}_{\mathcal B,\,a^{(1)},\,a^{(2)}}\left[ I_P(C_1;C_2) \right].
+\mathcal S^{*} \in \arg\max_{\mathcal S}\ \mathbb{E}_{\mathcal B,\,a^{(1)},\,a^{(2)}}\left[ I_P(C_1;C_2) \right]
 $$
 
-Since $I_P = H_P(C_1) - H_P(C_1\mid C_2)$, one objective does two jobs: a low conditional entropy makes each view's assignment $\color{#3b82f6}{\textsf{\textbf{predictable from the other}}}$ (augmentation consistency), and a high marginal entropy forces $\color{#3b82f6}{\textsf{\textbf{many prototypes to be used}}}$ (diversity).
+Since $I_P = H_P(C_1) - H_P(C_1\mid C_2)$, one objective does two jobs: a low conditional entropy makes each view's assignment $\color{#2563eb}{\textsf{\textbf{predictable from the other}}}$ (consistency), and a high marginal entropy forces $\color{#2563eb}{\textsf{\textbf{many prototypes to be used}}}$ (diversity).
+
+The loss is `bipartite_view_transition_loss` in [`distill.py`](distill.py): joint entropy minus $\beta$ times the row and column marginal entropies, which for the default `--beta 1` is exactly $-I_P(C_1;C_2)$.
+
+</details>
 
 ### Why not just enforce agreement?
 
-Minimizing the distance between the two views' assignments is the obvious alternative, and it has a $\color{#ea580c}{\textsf{\textbf{trivial optimum}}}$: assign every image to the same prototype and the loss is zero while all information is gone. Mutual information is zero there too, so it cannot be gamed this way.
+Minimizing the distance between the two views' assignments has a $\color{#c2410c}{\textsf{\textbf{trivial optimum}}}$: assign every image to one prototype and the loss is zero while all information is gone. Mutual information is zero there too, so it cannot be gamed this way.
 
 <p align="center">
   <img src="assets/mi-intuition.svg" alt="Left: illustrative joint assignment matrices for collapsed, uniform and consistent-and-diverse assignments with their mutual information. Right: CIFAR-10 accuracy for Random, agreement-only and MIPA" width="100%">
 </p>
 
-Measured on CIFAR-10 (1% labels), distilling with the agreement objective alone lands $\color{#ea580c}{\textsf{\textbf{below a random subset}}}$ (37.6 vs. 40.0 at 0.2%; 40.7 vs. 48.3 at 1%), while the mutual-information objective lands $\color{#3b82f6}{\textsf{\textbf{well above it}}}$.
+Measured on CIFAR-10 (1% labels), distilling with the agreement objective alone lands $\color{#c2410c}{\textsf{\textbf{below a random subset}}}$ (37.6 vs. 40.0 at 0.2%; 40.7 vs. 48.3 at 1%), while the mutual-information objective lands $\color{#2563eb}{\textsf{\textbf{well above it}}}$.
 
-The loss lives in `bipartite_view_transition_loss` in [`distill.py`](distill.py). It is implemented as joint entropy minus $\beta$ times the row and column marginal entropies, which for the default `--beta 1` is exactly $-I_P(C_1;C_2)$.
+### What consistency looks like
 
-What consistency looks like in practice: one real image and the same image rotated by 90°, assigned to ten prototypes. Even though the encoder sees different pixels in each view, the two assignment distributions overlap by 88%.
+One real image and the same image rotated by 90°, assigned to ten prototypes. The encoder sees different pixels in each view, yet the two assignment distributions overlap by 88%.
 
 <p align="center">
   <img src="assets/assignments.svg" alt="Two side-by-side histograms of how one real image, and the same image rotated by 90 degrees, are assigned to synthetic prototypes; the two distributions overlap by 88 percent" width="100%">
@@ -95,13 +102,18 @@ What consistency looks like in practice: one real image and the same image rotat
 > [!IMPORTANT]
 > The bar values are the assignment probabilities printed in the paper's Fig. 1a. The photos are CC0 (see [`assets/IMAGE_CREDITS.md`](assets/IMAGE_CREDITS.md)) and the synthetic prototypes are illustrative renderings of them, not outputs of a run.
 
+<br>
+
 ## Results
 
-All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scratch with SimCLR on the synthetic images only**, then evaluated with a linear classifier on 1% or 5% of the labels. Values are means over five runs; standard deviations are in the paper. `Random`, `K-Means` and `SAS` select real images; `KRR-ST` and `Prior (MKDT)` distill images and are evaluated image-only. `Full data` pretrains on the whole training set and is the ceiling.
+All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scratch with SimCLR on the synthetic images only**, evaluated with a linear classifier on 1% or 5% of the labels. Means over five runs; standard deviations are in the paper. `Random`, `K-Means` and `SAS` select real images. `KRR-ST` and `Prior (MKDT)` distill images and are evaluated image-only. `Full data` pretrains on the whole training set and is the ceiling.
 
 <p align="center">
   <img src="assets/results.svg" alt="Linear-probe accuracy of MIPA versus the strongest of five baselines on CIFAR-10, CIFAR-100 and Tiny ImageNet at 0.2, 1 and 2 percent synthetic budgets" width="100%">
 </p>
+
+> [!NOTE]
+> **Reading the numbers honestly.** MIPA has the highest mean in every configuration, and the margin is clear on CIFAR-10 ($\color{#2563eb}{\textsf{\textbf{+3.9 to +5.2 points}}}$ over the strongest baseline) and at the 2% CIFAR-100 budget ($\color{#2563eb}{\textsf{\textbf{+3.1}}}$). On CIFAR-100 at the 0.2% and 1% budgets the gain is $\color{#c2410c}{\textsf{\textbf{under half a point}}}$, about the size of the run-to-run standard deviation; on Tiny ImageNet it is between 0.5 and 1.4 points. A gap to full-data pretraining remains everywhere. MIPA also keeps improving as the synthetic set grows, whereas the image-only prior method barely improves or even drops.
 
 ### Accuracy with 1% labels
 
@@ -134,16 +146,13 @@ All numbers are linear-probe accuracy (%) of a **ResNet-18 pretrained from scrat
 
 </details>
 
-> [!NOTE]
-> **Reading the numbers honestly.** MIPA has the highest mean in every configuration, and the margin is clear on CIFAR-10 ($\color{#3b82f6}{\textsf{\textbf{+3.9 to +5.2 points}}}$ over the strongest baseline) and at the 2% CIFAR-100 budget ($\color{#3b82f6}{\textsf{\textbf{+3.1}}}$). On CIFAR-100 at the 0.2% and 1% budgets the gain is $\color{#ea580c}{\textsf{\textbf{under half a point}}}$, about the size of the run-to-run standard deviation; on Tiny ImageNet it is between 0.5 and 1.4 points. A gap to full-data pretraining remains everywhere. MIPA also keeps improving as the synthetic set grows, whereas the image-only prior method barely improves or even drops.
-
 ### Cheaper to distill
 
 <p align="center">
   <img src="assets/efficiency.svg" alt="Distillation time of MIPA versus the prior method on CIFAR-10, CIFAR-100 and Tiny ImageNet at 0.2, 1 and 2 percent budgets" width="100%">
 </p>
 
-MIPA is $\color{#3b82f6}{\textsf{\textbf{5.8-8.0× faster}}}$ than the prior method on CIFAR-10 and CIFAR-100, before even counting its expert-trajectory generation. On Tiny ImageNet the advantage is large at 0.2% (5.1×) and shrinks at larger budgets (1.2× at 2%). Intermediate storage drops from 10.65-11.91 GiB of trajectory buffers to 0.042 GiB, $\color{#3b82f6}{\textsf{\textbf{over 250× less on all three datasets}}}$.
+MIPA is $\color{#2563eb}{\textsf{\textbf{5.8-8.0× faster}}}$ than the prior method on CIFAR-10 and CIFAR-100, before even counting its expert-trajectory generation. On Tiny ImageNet the advantage is large at 0.2% (5.1×) and shrinks at larger budgets (1.2× at 2%). Intermediate storage drops from 10.65-11.91 GiB of trajectory buffers to 0.042 GiB, $\color{#2563eb}{\textsf{\textbf{over 250× less on all three datasets}}}$.
 
 <details>
 <summary><b>Table: distillation cost</b></summary>
@@ -159,6 +168,8 @@ MIPA is $\color{#3b82f6}{\textsf{\textbf{5.8-8.0× faster}}}$ than the prior met
 
 Single NVIDIA L40S; teacher pretraining excluded (required by MIPA and prior methods alike). Storage is intermediate distillation data.
 
+Single NVIDIA L40S; teacher pretraining excluded (required by MIPA and prior methods alike). Storage is intermediate distillation data.
+
 </details>
 
 ### What the prototypes look like
@@ -169,7 +180,7 @@ Single NVIDIA L40S; teacher pretraining excluded (required by MIPA and prior met
 
 Starting from real images, MIPA keeps the object layout and changes color, contrast and texture; some prototypes gain sharper boundaries, others pick up visible distortions. Starting from Gaussian noise is much worse (see *Initialization* below): geometric patterns appear, object structure does not.
 
-### Beyond the default setting
+### More experiments
 
 <details>
 <summary><b>Other architectures:</b> distilled with ResNet-18, pretrained as ResNet-34 / ResNet-50</summary>
@@ -244,11 +255,11 @@ Encoders pretrained on MIPA's CIFAR-10, CIFAR-100 or Tiny ImageNet synthetic set
 
 </details>
 
----
+<br>
 
 ## Quick start
 
-### Install
+**1. Install.** Python 3.10+ and PyTorch ≥ 2.1. A CUDA GPU is strongly recommended (the paper's timings are from one NVIDIA L40S); everything also runs on CPU, just slowly.
 
 ```bash
 git clone https://github.com/mhmoslemi/MIPA.git
@@ -256,14 +267,10 @@ cd MIPA
 pip install -r requirements.txt
 ```
 
-Requires **Python 3.10+** and **PyTorch ≥ 2.1**. A CUDA GPU is strongly recommended (the paper's timings are from one NVIDIA L40S); everything also runs on CPU, just slowly.
-
 > [!WARNING]
 > Runs use POSIX file locks, so use Linux or macOS (WSL on Windows).
 
-### Prepare data
-
-Point `--data-path` at a folder (default `data/`) laid out like this. Only official train/test splits are used, and nothing is downloaded automatically.
+**2. Prepare data.** Point `--data-path` at a folder (default `data/`) laid out as below. Only official train/test splits are used, and nothing is downloaded automatically.
 
 | Dataset | Expected under `data/` |
 |---|---|
@@ -275,9 +282,7 @@ Point `--data-path` at a folder (default `data/`) laid out like this. Only offic
 
 Aircraft and Dogs are only needed as transfer targets.
 
-### Run the three stages
-
-Run from the repository root.
+**3. Run the three stages** from the repository root.
 
 ```bash
 # 1. Train the frozen SimCLR ResNet-18 teacher on the full unlabeled training set
@@ -290,7 +295,7 @@ python distill.py --dataset CIFAR10 --percentage 0.2
 python eval.py --synthetic-checkpoint runs/CIFAR10/0.2/synthetic.pt --targets source
 ```
 
-`--targets all` evaluates on the source dataset plus every transfer target from the paper and $\color{#ea580c}{\textsf{\textbf{needs all five datasets on disk}}}$. Compare against the no-distillation baseline with a random real subset of the same size:
+`--targets all` evaluates on the source dataset plus every transfer target from the paper and $\color{#c2410c}{\textsf{\textbf{needs all five datasets on disk}}}$. Compare against the no-distillation baseline with a random real subset of the same size:
 
 ```bash
 python eval.py --random-subset --dataset CIFAR10 --percentage 0.2 --targets source
@@ -299,7 +304,8 @@ python eval.py --random-subset --dataset CIFAR10 --percentage 0.2 --targets sour
 > [!TIP]
 > Distillation checkpoints every 500 iterations. If a run is interrupted, re-run the same command with `--resume`.
 
-### What you get
+<details>
+<summary><b>What a run writes</b></summary>
 
 ```text
 runs/CIFAR10/
@@ -315,7 +321,10 @@ runs/CIFAR10/
         └── summary.json            # mean ± std accuracy per target and label budget
 ```
 
-### Use the distilled images
+</details>
+
+<details>
+<summary><b>Use the distilled images in your own code</b></summary>
 
 `synthetic.pt` stores normalized pixels in `data` along with the `normalization` used. To get ordinary `[0, 1]` images:
 
@@ -326,6 +335,10 @@ ckpt = torch.load("runs/CIFAR10/0.2/synthetic.pt", map_location="cpu", weights_o
 mean, std = (torch.tensor(v).view(1, 3, 1, 1) for v in ckpt["normalization"])
 images = (ckpt["data"] * std + mean).clamp(0, 1)   # (m, 3, H, W), ready for any SSL pipeline
 ```
+
+</details>
+
+<br>
 
 ## Reproducing the paper
 
@@ -448,6 +461,4 @@ MIPA builds on public work from the dataset-distillation and self-supervised-lea
 
 Released under the [MIT License](LICENSE). Code adapted from third-party projects remains under its original license.
 
-<div align="center">
-<sub>Questions or bugs? Open an issue.</sub>
-</div>
+<p align="center"><sub>Questions or bugs? Open an issue.</sub></p>
