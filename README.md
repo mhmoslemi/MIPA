@@ -10,7 +10,8 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
-[![Cite](https://img.shields.io/badge/cite-BibTeX-b31b1b?style=flat-square)](#citation)
+[![arXiv](https://img.shields.io/badge/arXiv-2611.31225-b31b1b?style=flat-square)](https://arxiv.org/abs/2611.31225)
+[![Cite](https://img.shields.io/badge/cite-BibTeX-555?style=flat-square)](#citation)
 
 ### Distill an unlabeled dataset into $\color{#2563eb}{\textsf{\textbf{0.2-2\%}}}$ of its size.<br>Pretrain a self-supervised model on it from scratch.
 
@@ -441,15 +442,17 @@ MIPA/
 
 ## Citation
 
-If MIPA is useful in your work, please cite the paper (GitHub's **Cite this repository** button reads [`CITATION.cff`](CITATION.cff)):
+If MIPA is useful in your work, please cite the [paper](https://arxiv.org/abs/2611.31225) (GitHub's **Cite this repository** button reads [`CITATION.cff`](CITATION.cff)):
 
 ```bibtex
-@article{moslemi2026mipa,
-  title   = {Self-Supervised Dataset Distillation via Mutual Information Maximization},
-  author  = {Moslemi, Mohammad Hossein and Beitollahi, Mahdi and Mei, Zhimin and
-             Cai, Jiale and Ghaddar, Bissan and Wang, Boyu},
-  journal = {arXiv preprint},
-  year    = {2026}
+@misc{moslemi2026selfsuperviseddatasetdistillationmutual,
+      title={Self-Supervised Dataset Distillation via Mutual Information Maximization},
+      author={Mohammad Hossein Moslemi and Mahdi Beitollahi and Zhimin Mei and Jiale Cai and Bissan Ghaddar and Boyu Wang},
+      year={2026},
+      eprint={2611.31225},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2611.31225},
 }
 ```
 

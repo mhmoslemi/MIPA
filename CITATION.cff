@@ -3,6 +3,7 @@ message: "If you use MIPA in your work, please cite the paper below."
 title: "MIPA: Self-Supervised Dataset Distillation via Mutual Information Maximization"
 type: software
 license: MIT
+url: "https://arxiv.org/abs/2611.31225"
 repository-code: "https://github.com/mhmoslemi/MIPA"
 keywords:
   - dataset distillation
@@ -30,8 +31,9 @@ authors:
 preferred-citation:
   type: article
   title: "Self-Supervised Dataset Distillation via Mutual Information Maximization"
-  journal: "arXiv preprint"
+  journal: "arXiv preprint arXiv:2611.31225"
   year: 2026
+  url: "https://arxiv.org/abs/2611.31225"
   authors:
     - family-names: Moslemi
       given-names: Mohammad Hossein
